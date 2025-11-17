@@ -22,12 +22,20 @@ async def root():
         "endpoint": "/receive (POST)"
     }
 
+
+GOOGLE_FORM_SECRET = "your secret"
+
 @app.post("/receive")
 async def receive(request: Request):
-    data = await request.json()
-    print("Received JSON:", data)
-
-    return {
-        "status": "success",
-        "received": data
-    }
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+    if "secret" not in data:
+        raise HTTPException(status_code=400, detail="Missing 'secret' field")
+    if data["secret"] != GOOGLE_FORM_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden: secret mismatch")
+    return JSONResponse(
+        status_code=200,
+        content={"status": "ok", "message": "Secret verified"}
+    )
