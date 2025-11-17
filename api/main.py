@@ -23,5 +23,11 @@ async def root():
     }
 
 @app.post("/receive")
-async def receive(data: Message):
-    return {"status": "received", "you_sent": data.text}
+async def receive(request: Request):
+    data = await request.json()
+    print("Received JSON:", data)
+
+    return {
+        "status": "success",
+        "received": data
+    }
