@@ -21,3 +21,7 @@ async def root():
         "status": "OK",
         "endpoint": "/receive (POST)"
     }
+
+@app.post("/receive")
+async def receive(data: Message):
+    return {"status": "received", "you_sent": data.text}
