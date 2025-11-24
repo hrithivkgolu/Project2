@@ -24,13 +24,12 @@ def ask_chatgpt(task):
     payload = {
         "model": "openai/gpt-4.1-nano",
         "input": f"""
-You are an automated agent. Read the content below and figure out what JSON
-needs to be submitted. Use this origin:.
+You are an automated agent. Read the content below Use this origin:.
 
 CONTENT:
 {task}
 
-Return ONLY the JSON body to POST. No explanation.
+Return only '''PAYLOAD, TYPE OF THING (POST,...) TO URL IN TASK, URL, ANSWER OF THE GIVEN QUESTION''' in json format only this.
 """
     }
     r = requests.post(url, json=payload, headers=headers)
