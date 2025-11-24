@@ -15,7 +15,7 @@ GOOGLE_FORM_SECRET = "HrithProj2"
 AI_PIPE_TOKEN = os.getenv("OPENAI_API_KEY")
 
 
-def use_chatgpt(task):
+def ask_chatgpt(task):
     url = "https://aipipe.org/openrouter/v1/responses"
     headers = {
         "Authorization": f"Bearer {AI_PIPE_TOKEN}",
