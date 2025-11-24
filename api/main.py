@@ -15,7 +15,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 
-def ask_chatgpt(task_content: str, origin: str):
+def ask_chatgpt(task_content: str):
     prompt = f"""
 You are an automated agent. Read the content below and figure out what JSON
 needs to be submitted. Use this origin:.
