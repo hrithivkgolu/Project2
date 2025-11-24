@@ -11,27 +11,22 @@ from openai import OpenAI
 app = FastAPI(title="QUIZ")
 
 GOOGLE_FORM_SECRET = "HrithProj2"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=OPENAI_API_KEY)
+
+AI_PIPE_TOKEN = os.getenv("OPENAI_API_KEY")
 
 
-def ask_chatgpt(task_content: str):
-    prompt = f"""
-You are an automated agent. Read the content below and figure out what JSON
-needs to be submitted. Use this origin:.
-
-CONTENT:
-{task_content}
-
-Return ONLY the JSON body to POST. No explanation.
-"""
-
-    response = client.responses.create(
-        model="gpt-4o-mini",
-        input=prompt
-    )
-
-    return response.output_text
+def use_chatgpt(task):
+    url = "https://aipipe.org/openrouter/v1/responses"
+    headers = {
+        "Authorization": f"Bearer {AI_PIPE_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "openai/gpt-4.1-nano",
+        "input": task
+    }
+    r = requests.post(url, json=payload, headers=headers)
+    return r.json()
 
 
 
