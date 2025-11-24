@@ -35,7 +35,16 @@ async def receive(request: Request):
         raise HTTPException(status_code=400, detail="Missing 'secret' field")
     if data["secret"] != GOOGLE_FORM_SECRET:
         raise HTTPException(status_code=403, detail="Forbidden: secret mismatch")
+    try:
+        response = requests.get(data["url"], timeout=10)
+        fetched_text = response.text
+        fetched_status = response.status_code
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail = f"Failed to fetch URL: {str(e)}")
+
+
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "message": "Secret verified"}
+        content={"status": "ok", "url_status": fetched_status, "content": fetched_text}
     )
