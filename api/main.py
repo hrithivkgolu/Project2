@@ -23,7 +23,7 @@ async def root():
     }
 
 
-GOOGLE_FORM_SECRET = "your secret"
+GOOGLE_FORM_SECRET = "HrithProj2"
 
 @app.post("/receive")
 async def receive(request: Request):
