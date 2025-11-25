@@ -102,9 +102,6 @@ async def receive(request: Request):
         parts[-1] = "submit"
         submit_url = "/".join(parts)
         a = await payme(data["url"])
-        url = submit_url
-        a["url"]=submit_url
-        a["answer"] = "yes"
         response = requests.post(url, json=a)
         response.raise_for_status()
                 
