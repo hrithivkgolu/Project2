@@ -96,8 +96,8 @@ async def receive(request: Request):
     if data["secret"] != GOOGLE_FORM_SECRET:
         raise HTTPException(status_code=403, detail="Forbidden: secret mismatch")
     try:
-        quiz = solve_quiz(data["url"])
-        payl = payme(data["url"])
+        quiz = await solve_quiz(data["url"])
+        payl = await payme(data["url"])
 
 
 
