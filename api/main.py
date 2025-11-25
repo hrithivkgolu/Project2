@@ -29,8 +29,7 @@ You are an automated agent. Read the content below Use this origin:
 CONTENT:
 {task}
 
-do the task given and 
-Return only '''PAYLOAD, TYPE OF THING (POST,...) TO URL IN TASK, URL, ANSWER OF THE GIVEN QUESTION(the question you got)''' in json format only this.
+do the task given
 """
     }
     r = requests.post(url, json=payload, headers=headers)
