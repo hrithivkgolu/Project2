@@ -123,7 +123,7 @@ async def receive(request: Request):
         quiz = await solve_quiz(data["url"])
         answer = quiz[0]
         sub_url = quiz[1]
-        c = answer["content"][0]["output"][0]["content"][0]["text"]
+        c = answer[0]["output_text"]
         payl = await payme(data["url"])
 
 
