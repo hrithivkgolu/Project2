@@ -61,9 +61,6 @@ async def payme(url: str):
     soup = BeautifulSoup(html, "html.parser")
     pre_tag = soup.find("pre")
     pre_text = pre_tag.get_text(strip=True) if pre_tag else ""
-
-    print("Rendered PRE text:")
-    print(pre_text)
     return pre_text
 
 
@@ -104,6 +101,7 @@ async def receive(request: Request):
         parts = data["url"].rstrip("/").split("/")
         parts[-1] = "submit"
         submit_url = "/".join(parts)
+        a = await payme(data["url"])
         
 
 
@@ -112,6 +110,6 @@ async def receive(request: Request):
 
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "payload": submit_url, "content": quiz[0], "chatgpt": "sub_url"}
+        content={"status": "ok", "payload": submit_url, "content": quiz[0], "chatgpt": a}
     )
 
