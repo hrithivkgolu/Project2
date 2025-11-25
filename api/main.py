@@ -6,7 +6,9 @@ import requests
 import datetime
 import re
 from openai import OpenAI
-from playwright.async_api import async_playwright
+import asyncio
+import httpx
+from bs4 import BeautifulSoup
 
 
 app = FastAPI(title="QUIZ")
@@ -50,41 +52,63 @@ async def root():
 GOOGLE_FORM_SECRET = "HrithProj2"
 
 
-async def payme(url):
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
+async def payme(url: str):
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        html = resp.text
 
-        await page.goto(url, wait_until="networkidle")
-        pre_text = await page.inner_text("pre")
+    soup = BeautifulSoup(html, "html.parser")
+    pre_tag = soup.find("pre")
+    pre_text = pre_tag.get_text(strip=True) if pre_tag else ""
 
-        print("Rendered PRE text:")
-        print(pre_text)
-
-        await browser.close()
-
+    print("Rendered PRE text:")
+    print(pre_text)
     return pre_text
 
+async def solve_quiz(url: str):
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        html = resp.text
 
+    soup = BeautifulSoup(html, "html.parser")
+
+    # 1) Extract the quiz text
+    question_tag = soup.select_one("#question")
+    quiz_text = question_tag.get_text(strip=True) if question_tag else ""
+
+    # 2) Solve the quiz (replace with your AI function)
+    answer = ask_chatgpt(quiz_text)  # your own function
+
+    # 3) Get the form action (submit URL)
+    form_tag = soup.find("form")
+    submit_url = form_tag.get("action") if form_tag else url
+
+    return answer, submit_url
 
 async def solve_quiz(url: str):
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        await page.goto(url, wait_until="networkidle")
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        html = resp.text
 
-        # 1) Extract the quiz text (example: “Sum the value column on page 2…”)
-        quiz_text = await page.inner_text("#question")  # depends on site
+    soup = BeautifulSoup(html, "html.parser")
 
-        # 2) You must parse the instructions and solve
-        answer = ask_chatgpt(quiz_text)
+    # 1) Extract the quiz text
+    question_tag = soup.select_one("#question")
+    quiz_text = question_tag.get_text(strip=True) if question_tag else ""
 
-        # 3) Find where to POST the answer (hidden in HTML form)
-        submit_url = await page.get_attribute("form", "action")
+    # 2) Solve the quiz (replace with your AI function)
+    answer = ask_chatgpt(quiz_text)  # your own function
 
-        await browser.close()
-        return answer, submit_url
+    # 3) Get the form action (submit URL)
+    form_tag = soup.find("form")
+    submit_url = form_tag.get("action") if form_tag else url
 
+    return answer, submit_url
+
+    
 @app.post("/receive")
 async def receive(request: Request):
     try:
