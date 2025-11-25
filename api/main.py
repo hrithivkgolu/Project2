@@ -133,6 +133,6 @@ async def receive(request: Request):
 
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "payload": payl, "content": c, "chatgpt": sub_url}
+        content={"status": "ok", "payload": payl, "content": "c", "chatgpt": sub_url}
     )
 
