@@ -66,26 +66,6 @@ async def payme(url: str):
     print(pre_text)
     return pre_text
 
-async def solve_quiz(url: str):
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        html = resp.text
-
-    soup = BeautifulSoup(html, "html.parser")
-
-    # 1) Extract the quiz text
-    question_tag = soup.select_one("#question")
-    quiz_text = question_tag.get_text(strip=True) if question_tag else ""
-
-    # 2) Solve the quiz (replace with your AI function)
-    answer = ask_chatgpt(quiz_text)  # your own function
-
-    # 3) Get the form action (submit URL)
-    form_tag = soup.find("form")
-    submit_url = form_tag.get("action") if form_tag else url
-
-    return answer, submit_url
 
 async def solve_quiz(url: str):
     async with httpx.AsyncClient() as client:
@@ -133,6 +113,6 @@ async def receive(request: Request):
 
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "payload": payl, "content": "c", "chatgpt": sub_url}
+        content={"status": "ok", "payload": payl, "content": "c", "chatgpt": "sub_url"}
     )
 
