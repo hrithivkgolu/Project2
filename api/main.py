@@ -64,12 +64,14 @@ async def receive(request: Request):
         fetched_status = response.status_code
         #answer_json = ask_chatgpt(fetched_text)
         a = str(type(fetched_text))
+        c = a.split('\n')
+
 
     except Exception as e:
         raise HTTPException(status_code=500, detail = f"Failed to fetch URL: {str(e)}")
 
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "url_status": fetched_status, "content": a, "chatgpt": "answer_json"}
+        content={"status": "ok", "url_status": fetched_status, "content": c[0], "chatgpt": "answer_json"}
     )
 
