@@ -119,6 +119,6 @@ async def receive(request: Request):
 
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "payload": submit_url, "content": quiz[0], "response":response}
+        content={"status": "ok", "payload": submit_url, "content": "yo", "response":"see"}
     )
 
