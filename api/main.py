@@ -6,6 +6,7 @@ import requests
 import datetime
 import re
 from openai import OpenAI
+from playwright.async_api import async_playwright
 
 
 app = FastAPI(title="QUIZ")
@@ -29,7 +30,7 @@ You are an automated agent. Read the content below Use this origin:
 CONTENT:
 {task}
 
-do the task given
+do the task given and only give one word no instruction nothing just one word
 """
     }
     r = requests.post(url, json=payload, headers=headers)
@@ -48,6 +49,42 @@ async def root():
 
 GOOGLE_FORM_SECRET = "HrithProj2"
 
+
+async def payme(url):
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+
+        await page.goto(url, wait_until="networkidle")
+        pre_text = await page.inner_text("pre")
+
+        print("Rendered PRE text:")
+        print(pre_text)
+
+        await browser.close()
+
+    return pre_text
+
+
+
+async def solve_quiz(url: str):
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        await page.goto(url, wait_until="networkidle")
+
+        # 1) Extract the quiz text (example: “Sum the value column on page 2…”)
+        quiz_text = await page.inner_text("#question")  # depends on site
+
+        # 2) You must parse the instructions and solve
+        answer = ask_chatgpt(quiz_text)
+
+        # 3) Find where to POST the answer (hidden in HTML form)
+        submit_url = await page.get_attribute("form", "action")
+
+        await browser.close()
+        return answer, submit_url
+
 @app.post("/receive")
 async def receive(request: Request):
     try:
@@ -59,12 +96,9 @@ async def receive(request: Request):
     if data["secret"] != GOOGLE_FORM_SECRET:
         raise HTTPException(status_code=403, detail="Forbidden: secret mismatch")
     try:
-        response = requests.get(data["url"], timeout=10)
-        fetched_text = response.text
-        fetched_status = response.status_code
-        #answer_json = ask_chatgpt(fetched_text)
-        a = fetched_text
-        c = a.split('\n')
+        quiz = solve_quiz(data["url"])
+        payl = payme(data["url"])
+
 
 
     except Exception as e:
@@ -72,6 +106,6 @@ async def receive(request: Request):
 
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "url_status": fetched_status, "content": c[0], "chatgpt": "answer_json"}
+        content={"status": "ok", "payload": payl, "content": quiz, "chatgpt": "answer_json"}
     )
 

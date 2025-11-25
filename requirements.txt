@@ -5,3 +5,4 @@ PyGithub
 httpx
 pydantic
 openai>=1.0.0
+playwright
