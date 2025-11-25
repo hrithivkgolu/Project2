@@ -5,4 +5,5 @@ PyGithub
 httpx
 pydantic
 openai>=1.0.0
-playwright
+httpx>=1.0.0
+beautifulsoup4>=4.12.2
