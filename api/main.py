@@ -102,7 +102,12 @@ async def receive(request: Request):
         parts[-1] = "submit"
         submit_url = "/".join(parts)
         a = await payme(data["url"])
-        
+        url = submit_url
+        a["url"]=submit_url
+        a["answer"] = "yes"
+        response = requests.post(url, json=a)
+        response.raise_for_status()
+                
 
 
     except Exception as e:
@@ -110,6 +115,6 @@ async def receive(request: Request):
 
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "payload": submit_url, "content": quiz[0], "chatgpt": a}
+        content={"status": "ok", "payload": submit_url, "content": quiz[0], "chatgpt": "yes"}
     )
 
