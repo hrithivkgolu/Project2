@@ -63,7 +63,7 @@ async def receive(request: Request):
         fetched_text = response.text
         fetched_status = response.status_code
         #answer_json = ask_chatgpt(fetched_text)
-        a = str(type(fetched_text))
+        a = fetched_text
         c = a.split('\n')
 
 
