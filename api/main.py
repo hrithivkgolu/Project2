@@ -108,7 +108,7 @@ async def solve_quiz(url: str):
 
     return answer, submit_url
 
-    
+
 @app.post("/receive")
 async def receive(request: Request):
     try:
@@ -121,6 +121,9 @@ async def receive(request: Request):
         raise HTTPException(status_code=403, detail="Forbidden: secret mismatch")
     try:
         quiz = await solve_quiz(data["url"])
+        answer = quiz[0]
+        sub_url = quiz[1]
+        c = answer["content"][0]["output"][0]["content"][0]["text"]
         payl = await payme(data["url"])
 
 
@@ -130,6 +133,6 @@ async def receive(request: Request):
 
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "payload": payl, "content": quiz, "chatgpt": "answer_json"}
+        content={"status": "ok", "payload": payl, "content": c, "chatgpt": sub_url}
     )
 
