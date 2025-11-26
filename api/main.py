@@ -99,27 +99,7 @@ async def receive(request: Request):
         raise HTTPException(status_code=400, detail="Missing 'secret' field")
     if data["secret"] != GOOGLE_FORM_SECRET:
         raise HTTPException(status_code=403, detail="Forbidden: secret mismatch")
-    try:
-        k = data["url"]
-        quiz = await solve_quiz(data["url"])
-        parts = k.rstrip("/").split("/")
-        parts[-1] = "submit"
-        submit_url = "/".join(parts)
-        a = await payme(data["url"])
-        a['email'] = data['email']
-        a['secret'] = data['secret']
-        g = quiz[0]["output"][0]["content"][0]["text"]
-        a['answer'] = g
-        a['url'] = k
-        async with httpx.AsyncClient() as client:
-            response = await client.post(submit_url, json=a)
-                
-        response.raise_for_status()
-
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail = f"Failed to fetch URL: {str(e)}")
-
+    
     try:
         current_url = data["url"]
         collected = [] 
