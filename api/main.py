@@ -50,19 +50,23 @@ async def root():
 
 
 
-
 async def payme(url: str):
     async with httpx.AsyncClient() as client:
-        r = await client.get(url)
-        r.raise_for_status()
+        resp = await client.get(url)
+        resp.raise_for_status()
 
-    import re, json
-    raw = re.search(r'(\{.*)', r.text, re.DOTALL).group(1)
-    raw = re.split(r'\s*==', raw)[0]          # cut off "== 50"
-    raw = re.sub(r'\}\s*(\}|\s*$)', '}', raw) # fix }} or } followed by garbage
-    raw = raw.replace('""', '"').strip()
+    soup = BeautifulSoup(resp.text, "html.parser")
+    pre = soup.find("pre")
 
-    return json.loads(raw)
+    if not pre:
+        raise ValueError("No <pre> tag found")
+
+    raw = pre.get_text().strip()
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return raw
 
 
 async def solve_quiz(url: str):
@@ -117,6 +121,7 @@ async def receive(request: Request):
 
             response_json = response.json()
             collected.append(response_json)
+            break
             current_url = response_json.get("url")
 
             if not current_url:
