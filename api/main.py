@@ -53,40 +53,19 @@ async def root():
 
 async def payme(url: str):
     async with httpx.AsyncClient() as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
-    pre = soup.find("pre")
-    if not pre:
-        pre = soup.find_all("pre")
-        if pre:
-            pre = pre[0] 
+        r = await client.get(url)
+        r.raise_for_status()
 
-    if not pre:
-        pattern = r'\{.*?"secret".*?\}.*?==.*?50'
-        match = re.search(pattern, resp.text, re.DOTALL)
-        if match:
-            raw = match.group(0).split("==")[0].strip() + "}"
-            raw = raw.replace('"{', '{').replace('}"', '}').replace('""', '"')
-            try:
-                return json.loads(raw)
-            except:
-                pass
-
-        raise ValueError("No <pre> tag or JSON-like text found in the page.")
-
-    raw = pre.get_text(strip=True)
-
-    if "==" in raw:
-        raw = raw.split("==")[0].strip() + "}"
-    raw = raw.replace('"{', '{').replace('}"', '}').replace('""', '"')
-
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError as e:
-        print(f"JSON failed to parse: {e}")
-        print(f"Raw text was: {raw!r}")
-        return raw
+    match = re.search(r'(\{.*?"secret".*?\})', r.text, re.DOTALL)
+    if not match:
+        raise ValueError("not found")
+    
+    raw = re.sub(r'\s*==.*$', '', match.group(1)).strip()
+    raw = raw.replace('""', '"')
+    if not raw.endswith('}'): 
+        raw += '}'
+    
+    return json.loads(raw)
 
 
 async def solve_quiz(url: str):
