@@ -110,10 +110,11 @@ async def receive(request: Request):
         a = await payme(data["url"])
         a['email'] = "hrithivk"
         a['answer'] = "0"
-        # async with httpx.AsyncClient() as client:
-        #     response = await client.post(submit_url, json=a)
+        a['url'] = k
+        async with httpx.AsyncClient() as client:
+            response = await client.post(submit_url, json=a)
                 
-        # response.raise_for_status()
+        response.raise_for_status()
 
 
     except Exception as e:
