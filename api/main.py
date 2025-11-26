@@ -120,7 +120,7 @@ async def receive(request: Request):
                 response = await client.post(submit_url, json=a)
                 response.raise_for_status()
 
-            response_json = resposne.json()
+            response_json = response.json()
             collected.append(response_json)
             current_url = response_json.get("url")
 
