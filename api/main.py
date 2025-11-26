@@ -56,17 +56,19 @@ async def payme(url: str):
     async with httpx.AsyncClient() as client:
         resp = await client.get(url)
         resp.raise_for_status()
-        html = resp.text
 
-    soup = BeautifulSoup(html, "html.parser")
-    pre_tag = soup.find("pre")
-    pre_text = pre_tag.get_text(strip=True) if pre_tag else ""
+    soup = BeautifulSoup(resp.text, "html.parser")
+    pre = soup.find("pre")
+
+    if not pre:
+        raise ValueError("No <pre> tag found")
+
+    raw = pre.get_text().strip()
+
     try:
-        data = json.loads(pre_text)
+        return json.loads(raw)
     except json.JSONDecodeError:
-        raise ValueError("The <pre> content is not valid JSON")
-
-    return data
+        return raw
 
 
 async def solve_quiz(url: str):
