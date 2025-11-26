@@ -62,18 +62,24 @@ async def payme(url: str):
     if pre:
         raw = pre.get_text().strip()
     else:
-        blocks = soup.find_all(["div", "code"])
+        divs = soup.find_all("div")
         raw = None
-        
-        for blk in blocks:
-            t = blk.get_text().strip()
-            if t.startswith("{") or t.startswith("[") or t[:1].isdigit():
-                raw = t
+
+        for div in divs:
+            nested_pre = div.find("pre")
+            if nested_pre:
+                raw = nested_pre.get_text().strip()
                 break
+        if raw is None:
+            blocks = soup.find_all(["div", "code"])
+            for blk in blocks:
+                t = blk.get_text().strip()
+                if t.startswith("{") or t.startswith("[") or t[:1].isdigit():
+                    raw = t
+                    break
 
         if raw is None:
             raise ValueError("No JSON-like text found in the page.")
-
     try:
         return json.loads(raw)
     except:
