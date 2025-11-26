@@ -109,7 +109,7 @@ async def receive(request: Request):
         submit_url = "/".join(parts)
         a = await payme(data["url"])
         a['email'] = "hrithivk"
-        a['answer'] = quiz[0]
+        a['answer'] = str(quiz[0])
         a['url'] = k
         async with httpx.AsyncClient() as client:
             response = await client.post(submit_url, json=a)
