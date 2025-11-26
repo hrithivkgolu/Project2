@@ -30,7 +30,7 @@ def ask_chatgpt(task):
 You are an automated agent. Read the content below Use this origin:
 
 CONTENT:
-{task}
+what is the sum of 1234+123
 
 do the task given and only give one word no instruction nothing just one word 0 if no answer
 """
@@ -109,7 +109,7 @@ async def receive(request: Request):
         submit_url = "/".join(parts)
         a = await payme(data["url"])
         a['email'] = "hrithivk"
-        a['answer'] = "0"
+        a['answer'] = quiz[0]
         a['url'] = k
         async with httpx.AsyncClient() as client:
             response = await client.post(submit_url, json=a)
@@ -122,6 +122,6 @@ async def receive(request: Request):
 
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "payload": submit_url, "content": "yo", "response":response.json()}
+        content={"status": "ok", "payload": submit_url, "content": a, "response":response.json()}
     )
 
