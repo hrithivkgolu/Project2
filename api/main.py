@@ -57,9 +57,13 @@ async def payme(url: str):
 
     soup = BeautifulSoup(resp.text, "html.parser")
     pre = soup.find("pre")
+    if not pre:
+        div = soup.find("div")
+        if div:
+            pre = div.find("pre")
 
     if not pre:
-        raise ValueError("No <pre> tag found")
+        return None
 
     raw = pre.get_text().strip()
 
@@ -102,6 +106,7 @@ async def receive(request: Request):
     try:
         current_url = data["url"]
         collected = [] 
+        postedto = []
 
         while current_url:
             parts = current_url.rstrip("/").split("/")
@@ -115,13 +120,13 @@ async def receive(request: Request):
             a['secret'] = data['secret']
             a['answer'] = g
             a['url'] = current_url
+            postedto.append(a)
             async with httpx.AsyncClient() as client:
                 response = await client.post(submit_url, json=a)
                 response.raise_for_status()
 
             response_json = response.json()
             collected.append(response_json)
-            break
             current_url = response_json.get("url")
 
             if not current_url:
