@@ -56,15 +56,12 @@ async def payme(url: str):
         r = await client.get(url)
         r.raise_for_status()
 
-    match = re.search(r'(\{.*?"secret".*?\})', r.text, re.DOTALL)
-    if not match:
-        raise ValueError("not found")
-    
-    raw = re.sub(r'\s*==.*$', '', match.group(1)).strip()
-    raw = raw.replace('""', '"')
-    if not raw.endswith('}'): 
-        raw += '}'
-    
+    import re, json
+    raw = re.search(r'(\{.*)', r.text, re.DOTALL).group(1)
+    raw = re.split(r'\s*==', raw)[0]          # cut off "== 50"
+    raw = re.sub(r'\}\s*(\}|\s*$)', '}', raw) # fix }} or } followed by garbage
+    raw = raw.replace('""', '"').strip()
+
     return json.loads(raw)
 
 
