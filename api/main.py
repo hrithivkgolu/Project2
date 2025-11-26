@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 
 app = FastAPI(title="QUIZ")
 
-GOOGLE_FORM_SECRET = "HrithProj2"
+GOOGLE_FORM_SECRET = os.getenv("FORM_KEY")
 
 AI_PIPE_TOKEN = os.getenv("OPENAI_API_KEY")
 
@@ -49,40 +49,43 @@ async def root():
     }
 
 
-GOOGLE_FORM_SECRET = "HrithProj2"
 
 
 async def payme(url: str):
     async with httpx.AsyncClient() as client:
         resp = await client.get(url)
         resp.raise_for_status()
-
     soup = BeautifulSoup(resp.text, "html.parser")
     pre = soup.find("pre")
-    if pre:
-        raw = pre.get_text().strip()
-    else:
-        divs = soup.find_all("div")
-        raw = None
+    if not pre:
+        pre = soup.find_all("pre")
+        if pre:
+            pre = pre[0] 
 
-        for div in divs:
-            nested_pre = div.find("pre")
-            if nested_pre:
-                raw = nested_pre.get_text().strip()
-                break
-        if raw is None:
-            blocks = soup.find_all(["div", "code"])
-            for blk in blocks:
-                t = blk.get_text().strip()
-                if t.startswith("{") or t.startswith("[") or t[:1].isdigit():
-                    raw = t
-                    break
+    if not pre:
+        pattern = r'\{.*?"secret".*?\}.*?==.*?50'
+        match = re.search(pattern, resp.text, re.DOTALL)
+        if match:
+            raw = match.group(0).split("==")[0].strip() + "}"
+            raw = raw.replace('"{', '{').replace('}"', '}').replace('""', '"')
+            try:
+                return json.loads(raw)
+            except:
+                pass
 
-        if raw is None:
-            raise ValueError("No JSON-like text found in the page.")
+        raise ValueError("No <pre> tag or JSON-like text found in the page.")
+
+    raw = pre.get_text(strip=True)
+
+    if "==" in raw:
+        raw = raw.split("==")[0].strip() + "}"
+    raw = raw.replace('"{', '{').replace('}"', '}').replace('""', '"')
+
     try:
         return json.loads(raw)
-    except:
+    except json.JSONDecodeError as e:
+        print(f"JSON failed to parse: {e}")
+        print(f"Raw text was: {raw!r}")
         return raw
 
 
@@ -94,7 +97,6 @@ async def solve_quiz(url: str):
 
     soup = BeautifulSoup(html, "html.parser")
 
-    # 1) Extract the quiz text
     question_tag = soup.select_one("#question")
     quiz_text = question_tag.get_text(strip=True) if question_tag else ""
 
