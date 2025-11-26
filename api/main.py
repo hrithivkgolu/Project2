@@ -59,15 +59,24 @@ async def payme(url: str):
 
     soup = BeautifulSoup(resp.text, "html.parser")
     pre = soup.find("pre")
+    if pre:
+        raw = pre.get_text().strip()
+    else:
+        blocks = soup.find_all(["div", "code"])
+        raw = None
+        
+        for blk in blocks:
+            t = blk.get_text().strip()
+            if t.startswith("{") or t.startswith("[") or t[:1].isdigit():
+                raw = t
+                break
 
-    if not pre:
-        raise ValueError("No <pre> tag found")
-
-    raw = pre.get_text().strip()
+        if raw is None:
+            raise ValueError("No JSON-like text found in the page.")
 
     try:
         return json.loads(raw)
-    except json.JSONDecodeError:
+    except:
         return raw
 
 
