@@ -61,7 +61,12 @@ async def payme(url: str):
     soup = BeautifulSoup(html, "html.parser")
     pre_tag = soup.find("pre")
     pre_text = pre_tag.get_text(strip=True) if pre_tag else ""
-    return pre_text
+    try:
+        data = json.loads(pre_text)
+    except json.JSONDecodeError:
+        raise ValueError("The <pre> content is not valid JSON")
+
+    return data
 
 
 async def solve_quiz(url: str):
@@ -105,9 +110,10 @@ async def receive(request: Request):
         a = await payme(data["url"])
         a['email'] = "hrithivk"
         a['answer'] = "0"
-        response = requests.post(submit_url, json=payload)
-        response.raise_for_status()
+        async with httpx.AsyncClient() as client:
+            response = await client.post(submit_url, json=a)
                 
+        response.raise_for_status()
 
 
     except Exception as e:
@@ -115,6 +121,6 @@ async def receive(request: Request):
 
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "payload": submit_url, "content": "yo", "response":"see"}
+        content={"status": "ok", "payload": submit_url, "content": "yo", "response":response.json()}
     )
 
