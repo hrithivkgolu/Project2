@@ -110,10 +110,10 @@ async def receive(request: Request):
         a = await payme(data["url"])
         a['email'] = "hrithivk"
         a['answer'] = "0"
-        async with httpx.AsyncClient() as client:
-            response = await client.post(submit_url, json=a)
+        # async with httpx.AsyncClient() as client:
+        #     response = await client.post(submit_url, json=a)
                 
-        response.raise_for_status()
+        # response.raise_for_status()
 
 
     except Exception as e:
@@ -121,6 +121,6 @@ async def receive(request: Request):
 
     return JSONResponse(
         status_code=200,
-        content={"status": "ok", "payload": submit_url, "content": "yo", "response":response.json()}
+        content={"status": "ok", "payload": submit_url, "content": "yo", "response":a}
     )
 
