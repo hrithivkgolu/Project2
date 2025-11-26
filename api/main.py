@@ -30,7 +30,7 @@ def ask_chatgpt(task):
 You are an automated agent. Read the content below Use this origin:
 
 CONTENT:
-what is the sum of 1234+123
+{task}
 
 do the task given and only give one word no instruction nothing just one word 0 if no answer
 """
@@ -81,10 +81,8 @@ async def solve_quiz(url: str):
     question_tag = soup.select_one("#question")
     quiz_text = question_tag.get_text(strip=True) if question_tag else ""
 
-    # 2) Solve the quiz (replace with your AI function)
-    answer = ask_chatgpt(quiz_text)  # your own function
+    answer = ask_chatgpt(quiz_text)  
 
-    # 3) Get the form action (submit URL)
     form_tag = soup.find("form")
     submit_url = form_tag.get("action") if form_tag else url
 
@@ -108,7 +106,8 @@ async def receive(request: Request):
         parts[-1] = "submit"
         submit_url = "/".join(parts)
         a = await payme(data["url"])
-        a['email'] = "hrithivk"
+        a['email'] = data['email']
+        a['secret'] = data['secret']
         g = quiz[0]["output"][0]["content"][0]["text"]
         a['answer'] = g
         a['url'] = k
@@ -121,8 +120,42 @@ async def receive(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail = f"Failed to fetch URL: {str(e)}")
 
-    return JSONResponse(
-        status_code=200,
-        content={"status": "ok", "payload": submit_url, "content": a, "response":g}
-    )
+    try:
+        current_url = data["url"]
+        collected = [] 
 
+        while current_url:
+            parts = current_url.rstrip("/").split("/")
+            parts[-1] = "submit"
+            submit_url = "/".join(parts)
+
+            a = await payme(current_url)
+            quiz = await solve_quiz(current_url)
+            g = quiz[0]["output"][0]["content"][0]["text"]
+            a['email'] = data['email']
+            a['secret'] = data['secret']
+            a['answer'] = g
+            a['url'] = current_url
+            async with httpx.AsyncClient() as client:
+                response = await client.post(submit_url, json=a)
+                response.raise_for_status()
+
+            response_json = resposne.json()
+            collected.append(response_json)
+            current_url = response_json.get("url")
+
+            if not current_url:
+                break
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "done",
+                "chain": collected  
+            }
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed: {str(e)}") 
+
+    
