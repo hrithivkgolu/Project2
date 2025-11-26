@@ -32,7 +32,7 @@ You are an automated agent. Read the content below Use this origin:
 CONTENT:
 {task}
 
-do the task given and only give one word no instruction nothing just one word
+do the task given and only give one word no instruction nothing just one word 0 if no answer
 """
     }
     r = requests.post(url, json=payload, headers=headers)
@@ -103,12 +103,8 @@ async def receive(request: Request):
         parts[-1] = "submit"
         submit_url = "/".join(parts)
         a = await payme(data["url"])
-        payload = {
-            "email": "your email",
-            "secret": "your secret",
-            "url": k,
-            "answer": "anything you want"  
-        }
+        a['email'] = "hrithivk"
+        a['answer'] = "0"
         response = requests.post(submit_url, json=payload)
         response.raise_for_status()
                 
