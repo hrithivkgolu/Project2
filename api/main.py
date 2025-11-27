@@ -1,21 +1,24 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
-import json, os, requests, httpx
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+import json
+import os
+import requests
+import datetime
+import re
 from openai import OpenAI
 import asyncio
+import httpx
+from bs4 import BeautifulSoup
+
 
 app = FastAPI(title="QUIZ")
 
-GOOGLE_FORM_SECRET = os.getenv("FORM_KEY")
-AI_PIPE_TOKEN = os.getenv("OPENAI_API_KEY")
+# GOOGLE_FORM_SECRET = os.getenv("FORM_KEY")
+GOOGLE_FORM_SECRET = "HrithProj2"
+# AI_PIPE_TOKEN = os.getenv("OPENAI_API_KEY")
+AI_PIPE_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjI0ZjIwMDA3MTdAZHMuc3R1ZHkuaWl0bS5hYy5pbiJ9.rASYROS3JYcUOBCR-fiCauPd9FCKTDpdlQdlu7Ptlzc"
 
-
-# ------------------------------------------------------------
-#  Ask GPT
-# ------------------------------------------------------------
-def ask_chatgpt(task: str):
+def ask_chatgpt(task):
     url = "https://aipipe.org/openrouter/v1/responses"
     headers = {
         "Authorization": f"Bearer {AI_PIPE_TOKEN}",
@@ -23,15 +26,30 @@ def ask_chatgpt(task: str):
     }
     payload = {
         "model": "openai/gpt-4.1-nano",
-        "input": f"Give ONE WORD answer for:\n{task}\nIf no answer say 0."
+        "input": f"""
+You are an automated agent. Read the content below Use this origin:
+
+CONTENT:
+{task}
+
+do the task given and only give one word no instruction nothing just one word 0 if no answer
+"""
     }
     r = requests.post(url, json=payload, headers=headers)
     return r.json()
 
 
-# ------------------------------------------------------------
-# EXTRACT JSON FROM FIRST PAGE
-# ------------------------------------------------------------
+
+@app.get("/")
+async def root():
+    return {
+        "service": "I am here",
+        "status": "OK",
+        "endpoint": "/receive (POST)"
+    }
+
+
+
 async def payme(url: str):
     async with httpx.AsyncClient() as client:
         resp = await client.get(url)
@@ -40,19 +58,17 @@ async def payme(url: str):
     soup = BeautifulSoup(resp.text, "html.parser")
     pre = soup.find("pre")
 
-    if not pre:
-        raise Exception("No <pre> JSON found on page")
+    if pre:
+        try:
+            raw = pre.get_text().strip()
+            return json.loads(raw)
+        except:
+            # Return empty dict if JSON invalid
+            return {}
+    else:
+        # Return empty dict if <pre> not found
+        return {}
 
-    try:
-        raw = pre.get_text().strip()
-        return json.loads(raw)
-    except:
-        raise Exception("Invalid JSON inside <pre>")
-
-
-# ------------------------------------------------------------
-# SOLVE A QUIZ PAGE
-# ------------------------------------------------------------
 async def solve_quiz(url: str):
     async with httpx.AsyncClient() as client:
         resp = await client.get(url)
@@ -61,114 +77,87 @@ async def solve_quiz(url: str):
 
     soup = BeautifulSoup(html, "html.parser")
 
-    # Detect type
-    def detect_quiz_type():
-        if soup.select_one("table"): return "scrape"
-        if soup.select_one("audio"): return "audio"
-        if soup.select_one(".n1") or soup.select_one(".n2"): return "math"
-        return "text"
+    question_div = soup.select_one("#question")
 
-    quiz_type = detect_quiz_type()
+    quiz_text = ""
 
-    # SCRAPE TYPE
-    if quiz_type == "scrape":
-        table = soup.select_one("table")
-        rows = table.find_all("tr")
-        extracted = [
-            " | ".join([td.get_text(strip=True) for td in tr.find_all(["td", "th"])])
-            for tr in rows
-        ]
-        task_text = "\n".join(extracted)
-        answer = ask_chatgpt(task_text)
+    if question_div:
+        # Remove <pre> tags
+        for pre_tag in question_div.find_all("pre"):
+            pre_tag.decompose()
 
-    # AUDIO TYPE
-    elif quiz_type == "audio":
-        audio_tag = soup.select_one("audio")
-        audio_url = urljoin(url, audio_tag.get("src"))
+        # Get all visible text in div
+        text_content = question_div.get_text(" ", strip=True)
 
-        async with httpx.AsyncClient() as client:
-            audio_file = await client.get(audio_url)
-            audio_file.raise_for_status()
-            audio_bytes = audio_file.content
+        # Collect hrefs separately
+        hrefs = [a["href"] for a in question_div.find_all("a", href=True)]
 
-        ai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        result = ai.audio.transcriptions.create(
-            file=("audio.wav", audio_bytes),
-            model="gpt-4o-mini-tts"
-        )
-        transcript = result.text.strip()
-        answer = ask_chatgpt(transcript)
+        # Combine text + hrefs
+        quiz_text = text_content + " " + " ".join(hrefs) if hrefs else text_content
 
-    # MATH TYPE
-    elif quiz_type == "math":
-        a = int(soup.select_one(".n1").get_text(strip=True))
-        b = int(soup.select_one(".n2").get_text(strip=True))
-        return str(a + b), url
+    answer = ask_chatgpt(quiz_text)  
+    secret = quiz_text
 
-    # TEXT TYPE
-    else:
-        q = soup.select_one("#q") or soup.select_one("#question")
-        quiz_text = q.get_text(strip=True) if q else ""
-        answer = ask_chatgpt(quiz_text)
-
-    # Extract next URL
+    # Get form submit URL
     form_tag = soup.find("form")
-    submit_url = urljoin(url, form_tag.get("action")) if form_tag else url
+    submit_url = form_tag.get("action") if form_tag else url
 
-    return answer, submit_url
-
-
-# ------------------------------------------------------------
-# ROOT
-# ------------------------------------------------------------
-@app.get("/")
-async def root():
-    return {"service": "I am here", "status": "OK"}
+    return answer, submit_url, secret
 
 
-# ------------------------------------------------------------
-# RECEIVE (MAIN)
-# ------------------------------------------------------------
 @app.post("/receive")
 async def receive(request: Request):
     try:
         data = await request.json()
-    except:
+    except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON body")
-
-    if data.get("secret") != GOOGLE_FORM_SECRET:
+    if "secret" not in data:
+        raise HTTPException(status_code=400, detail="Missing 'secret' field")
+    if data["secret"] != GOOGLE_FORM_SECRET:
         raise HTTPException(status_code=403, detail="Forbidden: secret mismatch")
-
+    
     try:
+        count = 0
         current_url = data["url"]
-
-        # Extract master JSON on first page
-        master_payload = await payme(current_url)
-
-        chain = []
-        payloads = []
+        collected = [] 
+        postedto = []
+        quiz_t = []
 
         while current_url:
-            answer, next_url = await solve_quiz(current_url)
+            parts = current_url.rstrip("/").split("/")
+            parts[-1] = "submit"
+            submit_url = "/".join(parts)
 
-            # Extract answer text
-            if isinstance(answer, dict):
-                try:
-                    g = answer["output"][0]["content"][0]["text"]
-                except:
-                    g = "0"
-            else:
-                g = str(answer)
+            a = await payme(current_url)
+            quiz = await solve_quiz(current_url)
+            quiz_t.append(quiz[2])
+            g = quiz[0]["output"][0]["content"][0]["text"]
+            a['email'] = data['email']
+            a['secret'] = data['secret']
+            a['answer'] = g
+            a['url'] = current_url
+            postedto.append(a)
+            async with httpx.AsyncClient() as client:
+                response = await client.post(submit_url, json=a)
+                response.raise_for_status()
 
-            chain.append({"url": current_url, "answer": g})
+            response_json = response.json()
+            collected.append(response_json)
+            current_url = response_json.get("url")
 
-            current_url = next_url
+            if not current_url:
+                break
 
-        return {
-            "status": "done",
-            "chain": chain,
-            "payload": payloads
-        }
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "done",
+                "chain": collected,
+                "payload": postedto,
+                "quiz" : quiz_t
+
+            }
+        )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed: {str(e)}") 
