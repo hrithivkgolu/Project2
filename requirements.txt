@@ -1,8 +1,8 @@
 fastapi
 uvicorn
 requests
-PyGithub
 httpx
 pydantic
 openai>=1.0.0
 beautifulsoup4>=4.12.2
+lxml
