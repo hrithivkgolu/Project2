@@ -104,16 +104,18 @@ async def receive(request: Request):
         raise HTTPException(status_code=403, detail="Forbidden: secret mismatch")
     
     try:
+        count = 1
         current_url = data["url"]
         collected = [] 
         postedto = []
 
         while current_url:
+            if count <=1:
+                a = await payme(current_url)
+                count += 1
             parts = current_url.rstrip("/").split("/")
             parts[-1] = "submit"
             submit_url = "/".join(parts)
-
-            a = await payme(current_url)
             quiz = await solve_quiz(current_url)
             g = quiz[0]["output"][0]["content"][0]["text"]
             a['email'] = data['email']
