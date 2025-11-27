@@ -141,7 +141,8 @@ async def receive(request: Request):
             status_code=200,
             content={
                 "status": "done",
-                "chain": collected  
+                "chain": collected,
+                "payload": postedto
             }
         )
 
