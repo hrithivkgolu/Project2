@@ -113,6 +113,9 @@ async def receive(request: Request):
             if count <=1:
                 a = await payme(current_url)
                 count += 1
+
+            if a is None:
+                raise Exception("No <pre> content found at the quiz page")
             parts = current_url.rstrip("/").split("/")
             parts[-1] = "submit"
             submit_url = "/".join(parts)
