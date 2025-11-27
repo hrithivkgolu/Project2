@@ -13,10 +13,9 @@ from bs4 import BeautifulSoup
 
 app = FastAPI(title="QUIZ")
 
-# GOOGLE_FORM_SECRET = os.getenv("FORM_KEY")
-GOOGLE_FORM_SECRET = "HrithProj2"
-# AI_PIPE_TOKEN = os.getenv("OPENAI_API_KEY")
-AI_PIPE_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjI0ZjIwMDA3MTdAZHMuc3R1ZHkuaWl0bS5hYy5pbiJ9.rASYROS3JYcUOBCR-fiCauPd9FCKTDpdlQdlu7Ptlzc"
+GOOGLE_FORM_SECRET = os.getenv("FORM_KEY")
+AI_PIPE_TOKEN = os.getenv("OPENAI_API_KEY")
+
 
 def ask_chatgpt(task):
     url = "https://aipipe.org/openrouter/v1/responses"
