@@ -81,16 +81,82 @@ async def solve_quiz(url: str):
 
     soup = BeautifulSoup(html, "html.parser")
 
-    question_tag = soup.select_one("#question")
-    quiz_text = question_tag.get_text(strip=True) if question_tag else ""
+    # ------------ QUIZ TYPE DETECTION ------------
+    def detect_quiz_type():
+        if soup.select_one("table"):
+            return "scrape"
+        if soup.select_one("audio"):
+            return "audio"
+        if soup.select_one("span.n1") or soup.select_one(".n1"):
+            return "math"
+        return "text"
 
-    answer = ask_chatgpt(quiz_text)  
+    quiz_type = detect_quiz_type()
 
+    # ------------ SCRAPE QUIZ (extract HTML table) ------------
+    if quiz_type == "scrape":
+        table = soup.select_one("table")
+        rows = table.find_all("tr")
+        extracted = []
+
+        for tr in rows:
+            cols = [td.get_text(strip=True) for td in tr.find_all(["td", "th"])]
+            if cols:
+                extracted.append(cols)
+
+        task_text = "\n".join([" | ".join(r) for r in extracted])
+        answer = ask_chatgpt(task_text)
+
+    # ------------ AUDIO QUIZ (download + transcription) ------------
+    elif quiz_type == "audio":
+        audio_tag = soup.select_one("audio")
+        audio_url = audio_tag.get("src")
+
+        if audio_url.startswith("/"):
+            # convert to absolute
+            from urllib.parse import urljoin
+            audio_url = urljoin(url, audio_url)
+
+        async with httpx.AsyncClient() as client:
+            audio_resp = await client.get(audio_url)
+            audio_resp.raise_for_status()
+            audio_bytes = audio_resp.content
+
+        # send audio bytes to ChatGPT (whisper)
+        ai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        result = ai.audio.transcriptions.create(
+            file=("audio.wav", audio_bytes),
+            model="gpt-4o-mini-tts"
+        )
+        transcript = result.text.strip()
+
+        answer = ask_chatgpt(transcript)
+
+    # ------------ MATH QUIZ (numbers inside spans) ------------
+    elif quiz_type == "math":
+        n1 = soup.select_one(".n1, span.n1")
+        n2 = soup.select_one(".n2, span.n2")
+
+        try:
+            a = int(n1.get_text(strip=True))
+            b = int(n2.get_text(strip=True))
+            ans = str(a + b)
+        except:
+            ans = "0"
+
+        return ans, url
+
+    # ------------ TEXT QUIZ (#q or #question) ------------
+    else:
+        q = soup.select_one("#q") or soup.select_one("#question")
+        quiz_text = q.get_text(strip=True) if q else ""
+        answer = ask_chatgpt(quiz_text)
+
+    # ------------ Submit URL extraction ------------
     form_tag = soup.find("form")
     submit_url = form_tag.get("action") if form_tag else url
 
     return answer, submit_url
-
 
 @app.post("/receive")
 async def receive(request: Request):
@@ -125,7 +191,8 @@ async def receive(request: Request):
             a['secret'] = data['secret']
             a['answer'] = g
             a['url'] = current_url
-            postedto.append(a)
+            payload = dict(a)
+            postedto.append(payload)
             async with httpx.AsyncClient() as client:
                 response = await client.post(submit_url, json=a)
                 response.raise_for_status()
